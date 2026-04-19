@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-512.png">
+    <meta name="theme-color" content="#c8a455">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ТПКК">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-512.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>ТПКК | Инвентаризация</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; transition: 0.3s; font-family: 'Montserrat', sans-serif; }
+        body { background: #1e1a0e; padding: 15px; display: flex; justify-content: center; }
+        .container { max-width: 1400px; width: 100%; background: rgba(246, 233, 198, 0.92); border-radius: 24px; padding: 16px; border: 2px solid #c8a455; }
+        .dark { background: #1a1a1a; color: #fff; }
+        .dark .container { background: #2a2a2a; border-color: #8b6b3c; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .title { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 800; color: #3a2c18; }
+        .dark .title { color: #ffdfa0; }
+        .badge { background: #382e1c; color: #fae6b1; padding: 10px 18px; border-radius: 40px; border: 1px solid #c8a455; }
+        .tabs, .actions, .bulk { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 15px 0; }
+        .btn { padding: 10px 18px; border-radius: 40px; border: 2px solid; font-weight: 700; cursor: pointer; box-shadow: 0 4px 0 #2b1f0e; background: #5e3e1c; color: #ffdfa0; border-color: #b98b3d; }
+        .btn.active { background: #c8a04b; color: #1f1a0c; border-color: #ffd700; }
+        .btn.green { background: #4a6b3d; border-color: #8bae6e; }
+        .btn.red { background: #b83b3b; border-color: #ff8a8a; }
+        .btn.undo { background: #b86b2c; border-color: #f0a55a; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px,1fr)); gap: 10px; margin: 15px 0; }
+        .stat { background: #382e1c; padding: 10px; border-radius: 24px; color: #ffd98c; text-align: center; border: 2px solid #c8a04b; }
+        .dark .stat { color: #fff; }
+        .table-wrap { overflow-x: auto; border-radius: 16px; max-height: 600px; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+        table { width: 100%; border-collapse: collapse; min-width: 1000px; }
+        th { background: #724c21; color: #ffdfa0; padding: 14px 6px; position: sticky; top: 0; }
+        td { padding: 12px 6px; background: #fff7e4; color: #312713; border-bottom: 2px solid #dbc28b; }
+        .dark td { background: #2a2a2a; color: #fff; border-color: #444; }
+        .status { display: inline-block; padding: 5px 10px; border-radius: 30px; font-size: 11px; min-width: 90px; text-align: center; }
+        .expired { background: #c53b1e; color: #fff; animation: pulse 2s infinite; }
+        .urgent { background: #e68a2e; }
+        .soon { background: #b8a035; }
+        .normal { background: #3b8230; color: #fff; }
+        .future { background: #5f5f5f; color: #fff; }
+        @keyframes pulse { 0% { box-shadow: 0 0 8px #ff9c4a; } 50% { box-shadow: 0 0 16px #ff4d4d; } }
+        .date-picker { padding: 6px; border-radius: 20px; border: 2px solid #b98b3d; background: #fff3d6; width: 130px; }
+        .dark .date-picker { background: #3a3a3a; color: #fff; }
+        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 2000; }
+        .modal-content { background: #fff7e4; padding: 30px; border-radius: 30px; max-width: 500px; width: 90%; }
+        .dark .modal-content { background: #2a2a2a; color: #fff; }
+        .note { margin-top: 16px; padding: 12px; background: #ebd9ae; border-radius: 16px; border-left: 6px solid #b47d3b; }
+        .dark .note { background: #2a2a2a; color: #fff; }
+        .footer { display: flex; justify-content: space-between; margin-top: 24px; padding: 16px; background: #382e1c; color: #ffe1a4; border-radius: 40px; }
+        .hidden { display: none !important; }
+        .calendar-day { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #fff7e4; color: #312713; border-radius: 8px; font-size: 12px; cursor: pointer; }
+        .dark .calendar-day { background: #2a2a2a; color: #fff; }
+        .calendar-day.has-visits { background: #c8a455; color: #1f1a0c; font-weight: 700; }
+        .dark .calendar-day.has-visits { background: #8b6b3c; color: #fff; }
+        .forecast-item { padding: 10px; background: #fff7e4; color: #312713; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; }
+        .dark .forecast-item { background: #2a2a2a; color: #fff; }
+        .forecast-date { font-weight: 700; color: #c8a455; border-bottom: 2px solid #c8a455; margin-bottom: 10px; }
+        .dark .forecast-date { color: #8b6b3c; border-color: #8b6b3c; }
+        .btn-small { border: none; color: white; padding: 4px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; cursor: pointer; background: #5e3e1c; }
+        .btn-small.red { background: #b83b3b; }
+        .highlight-overdue { border-left: 6px solid #c0392b; }
+        .route-settings { display: flex; flex-direction: column; gap: 15px; margin: 20px 0; }
+        .route-period { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .route-custom { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+        .route-preview { max-height: 400px; overflow-y: auto; background: #fff; padding: 15px; border-radius: 12px; font-family: monospace; white-space: pre-wrap; font-size: 12px; }
+        .dark .route-preview { background: #1a1a1a; color: #fff; }
+        .success-message { position: fixed; top: 10px; left: 10px; right: 10px; background: #2d5a24; color: white; padding: 14px; border-radius: 50px; text-align: center; z-index: 1000; display: none; }
+    </style>
+</head>
+<body>
+    <div id="app" class="container"></div>
+    
+    <!-- Модальное окно для маршрутного листа -->
+    <div id="routeModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 800px;">
+            <h3>📋 Настройка маршрутного листа</h3>
+            <div class="route-settings">
+                <div class="route-period">
+                    <button class="btn" data-route="week">Неделя</button>
+                    <button class="btn" data-route="month">Месяц</button>
+                    <button class="btn" data-route="quarter">Квартал</button>
+                    <button class="btn" data-route="custom">Свой период</button>
+                </div>
+                <div id="customDateRange" class="route-custom" style="display: none;">
+                    <input type="date" id="routeDateFrom" class="date-picker">
+                    <span>—</span>
+                    <input type="date" id="routeDateTo" class="date-picker">
+                </div>
+                <div>
+                    <button class="btn green" id="generateRouteBtn">📄 Сформировать</button>
+                    <button class="btn undo" id="closeRouteBtn">✖ Закрыть</button>
+                </div>
+                <div id="routePreview" class="route-preview" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // Состояние приложения
+            const state = {
+                points: [],
+                trash: [],
+                history: [],
+                dark: false,
+                sound: true,
+                sort: 'overdueDesc',
+                tab: 'table',
+                forecastMode: 'day',
+                commentIndex: -1
+            };
+
+            // Константы
+            const TODAY = new Date();
+            const INIT_DATA = [
+                ['ООО Гомер "Фрэнк by Баста"','ул. Мира','2026-02-09'],
+                ['ООО Антракт "Винсент"','ул Мира','2026-02-02'],
+                ['Ип Сычев "Тори Рамен"','ул. Красноармейская','2026-02-06'],
+                ['ООО СтройГарант "Цех этого города"','ул. Красноармейская','2026-02-06'],
+                ['Ип Белоногова "Холостяки"','ул. Красная','2026-02-06'],
+                ['ООО Оборотень "Оборотень"','ул. Красная','2026-02-12'],
+                ['ООО Скрепи Коко "ZOHAN BAR"','ул. Красноармейская','2026-02-04'],
+                ['ООО Мак Грегор "Мак Грегор"','ул. Красная','2026-02-10'],
+                ['ООО Трюм "Трюм"','ул. Красная','2026-02-02'],
+                ['ООО Калибри "Тануки"','ул. Красная','2026-02-02'],
+                ['Ип Силизян "Любии печь"','ул. Ломоносова','2026-01-12'],
+                ['ООО Голый повар "Голый повар"','ТЦ "Центр города"','2026-02-10'],
+                ['ООО РестоЮГ "Диканька"','ТРЦ Галерея','2026-01-24'],
+                ['Ип Ибрагимова "BERR&BEER"','ТРЦ Галерея','2020-01-01'],
+                ['ООО Медуза Сочи "Pro.Хинкали"','ул. Тургенева','2026-02-12'],
+                ['ООО Медуза Сочи "Pro.Хинкали"','ул. Красная','2026-02-12'],
+                ['ООО РестоЮГ "Диканька"','ул.Промыщленная','2026-02-09'],
+                ['ООО СтройГарант "Цех этого города"','ул.Янковского','2026-02-09'],
+                ['ООО Ларет "HOTEL"','ул. Промышленная','2026-01-20'],
+                ['ООО Драго "Балкан Гриль"','ул. Советская','2026-02-10'],
+                ['ООО СкрепиКоко "Наливкин"','ТЦ Центр Города','2026-02-10'],
+                ['ООО КремлинКитчен "Urban Bar"','ул. Северная','2020-01-01'],
+                ['ООО Орбита Краснодар "Spaten Haus"','ул. Красная','2026-02-06'],
+                ['ООО МясоЛов "МясоЛов"','ул. Красная','2026-02-02'],
+                ['ООО Бикью "Bq123"','ул. Красная','2026-02-11'],
+                ['ООО Бикью "Рюмка"','ул. Красная','2026-02-11'],
+                ['ООО Поесть "Фанки фуд"','ул. Красная','2026-01-30'],
+                ['ООО Ибис "Ибис"','ул. Головатого','2026-02-12'],
+                ['ИП Сычов "Тори Рамен"','ул. Красная','2026-02-02'],
+                ['ИП Самошина "Панко фуд"','ТЦ Центр города','2026-02-10'],
+                ['ИП Савин "ZOHAN BAR"','ТЦ Центр города','2026-02-10'],
+                ['ИП Ветошкин "Иван Раковар"','ул. Рашпилевская','2026-02-02'],
+                ['ООО ЁПТ-групп "ЁПТ"','ул. Красная','2026-01-30'],
+                ['ООО Дом мир "Настоятель"','ул. Красноармейская','2026-02-04'],
+                ['ООО Грифендор "Шанхай"','ул. Красноармейская','2026-02-04'],
+                ['ИП Савин "Одно место"','ул. Красноармейская','2026-01-28'],
+                ['ООО РыбаМясо "РыбаМясо"','ул. Красная','2026-02-04'],
+                ['ООО Монти Групп "Сержант Пепер"','ул. Чапаева','2026-02-03'],
+                ['ООО СИН "Ракета"','ул. Чапаева','2026-01-26'],
+                ['Стаксель (это парус)','ул. Чапаева','2000-01-01'],
+                ['ИП Цыбулина "Жар Пицца"','ул. Красных партизан','2026-02-11'],
+                ['ИП Цыбулина "Жар Пицца"','ул. Красная','2026-02-11'],
+                ['ИП Воронина "Искра"','ул. Красная','2026-02-05'],
+                ['ИП Гудименнко "Нахлебник"','ул. Рашпилевская','2026-02-06'],
+                ['ООО ТриплРЭД "Фрэнк by Баста"','ул. Красная','2026-02-09'],
+                ['ООО Скотина "Скотина"','ул. Суворова','2026-02-03'],
+                ['ООО СЭВЭДЖ "МЕТРО"','ул. Красная','2026-01-15']
+            ].map(([name,address,lastVisit]) => ({name,address,lastVisit,comment:''}));
+
+            // Утилиты
+            const utils = {
+                days: (date) => date === '2000-01-01' ? 9999 : Math.floor((TODAY - new Date(date)) / 86400000),
+                status: (d) => d > 14 ? ['ПРОСРОЧЕНО','expired'] : d >= 12 ? ['Срочно!','urgent'] : d >= 8 ? ['Скоро','soon'] : d >= 0 ? ['В норме','normal'] : ['Будущее','future'],
+                next: (d) => d === '2000-01-01' ? 'Никогда' : new Date(new Date(d).setDate(new Date(d).getDate()+14)).toLocaleDateString('ru-RU',{day:'numeric',month:'short'}),
+                save: () => localStorage.setItem('tpkk', JSON.stringify(state)),
+                load: () => { try { const s = localStorage.getItem('tpkk'); if(s) Object.assign(state, JSON.parse(s)); else state.points = [...INIT_DATA]; } catch { state.points = [...INIT_DATA]; } },
+                msg: (text) => { const m = document.getElementById('msg'); if(m) { m.textContent = text; m.style.display = 'block'; setTimeout(() => m.style.display = 'none', 2000); } }
+            };
+
+            // Загрузка
+            utils.load();
+
+            // Функция генерации маршрутного листа
+            function generateRouteReport(dateFrom, dateTo) {
+                const from = new Date(dateFrom);
+                const to = new Date(dateTo);
+                to.setHours(23, 59, 59);
+                
+                const visits = state.points.map(p => {
+                    const nextVisit = new Date(p.lastVisit);
+                    nextVisit.setDate(nextVisit.getDate() + 14);
+                    return {
+                        ...p,
+                        nextVisit,
+                        daysSince: utils.days(p.lastVisit),
+                        status: utils.status(utils.days(p.lastVisit))[0]
+                    };
+                }).filter(p => p.nextVisit >= from && p.nextVisit <= to);
+                
+                visits.sort((a, b) => a.nextVisit - b.nextVisit);
+                
+                const byDay = {};
+                visits.forEach(v => {
+                    const dateStr = v.nextVisit.toLocaleDateString('ru-RU');
+                    if (!byDay[dateStr]) byDay[dateStr] = [];
+                    byDay[dateStr].push(v);
+                });
+                
+                let report = 'МАРШРУТНЫЙ ЛИСТ ТПКК\n';
+                report += '═══════════════════════════════\n';
+                report += `Дата формирования: ${TODAY.toLocaleDateString('ru-RU')}\n`;
+                report += `Период: ${from.toLocaleDateString('ru-RU')} — ${to.toLocaleDateString('ru-RU')}\n`;
+                report += `Всего визитов: ${visits.length}\n`;
+                report += `Всего точек: ${state.points.length}\n\n`;
+                
+                if (visits.length === 0) {
+                    report += '❌ Нет визитов в выбранном периоде\n';
+                } else {
+                    report += '📋 СПИСОК ТОЧЕК ДЛЯ ПОСЕЩЕНИЯ:\n';
+                    report += '───────────────────────────────\n\n';
+                    
+                    visits.forEach((v, i) => {
+                        report += `${i+1}. ${v.name}\n`;
+                        report += `   📍 ${v.address}\n`;
+                        report += `   📅 Последний визит: ${v.lastVisit}\n`;
+                        report += `   📅 Рекомендуемая дата: ${v.nextVisit.toLocaleDateString('ru-RU')}\n`;
+                        report += `   ⏱️ Дней с визита: ${v.daysSince > 1000 ? '∞' : v.daysSince}\n`;
+                        report += `   🏷️ Статус: ${v.status}\n`;
+                        if (v.comment) report += `   💬 ${v.comment}\n`;
+                        report += '\n';
+                    });
+                    
+                    report += '🗓️ МАРШРУТ ПО ДНЯМ:\n';
+                    report += '───────────────────────────────\n\n';
+                    
+                    Object.keys(byDay).sort().forEach(date => {
+                        report += `${date}:\n`;
+                        byDay[date].forEach(v => {
+                            report += `   • ${v.name} (${v.address})\n`;
+                        });
+                        report += '\n';
+                    });
+                }
+                
+                return report;
+            }
+
+            // Рендер
+            function render() {
+                const enriched = state.points.map(p => ({...p, days: utils.days(p.lastVisit), status: utils.status(utils.days(p.lastVisit))}));
+                enriched.sort((a,b) => state.sort === 'overdueDesc' ? b.days - a.days : state.sort === 'overdueAsc' ? a.days - b.days : b.days - a.days);
+                
+                const total = state.points.length;
+                const counts = [0,0,0,0,0];
+                enriched.forEach(p => { if(p.days>14) counts[0]++; else if(p.days>=12) counts[1]++; else if(p.days>=8) counts[2]++; else if(p.days>=0) counts[3]++; else counts[4]++; });
+
+                document.getElementById('app').innerHTML = `
+                    <div class="${state.dark ? 'dark' : ''}">
+                        <div id="msg" class="success-message">✅</div>
+                        
+                        <div class="header">
+                            <div class="title"><span>🍺🍻</span>ТПКК ИНВЕНТАРИЗАЦИЯ</div>
+                            <div style="display:flex; gap:10px;">
+                                <button class="btn" data-action="theme">🌓 Тема</button>
+                                <div class="badge">🏭 ПИВНАЯ КОМПАНИЯ ТПКК • ЦИКЛ 14 ДНЕЙ</div>
+                            </div>
+                        </div>
+
+                        <div class="tabs">
+                            ${[
+                                ['table','📊 Таблица'],
+                                ['forecast','📅 Прогноз'],
+                                ['charts','📈 Графики'],
+                                ['history','📜 История'],
+                                ['trash','🗑️ Корзина']
+                            ].map(([t,label]) => `<button class="btn ${state.tab===t?'active':''}" data-tab="${t}">${label}</button>`).join('')}
+                        </div>
+
+                        ${state.tab==='table' ? `
+                            <div class="sorting-panel" style="background:rgba(58,44,24,0.5); padding:16px; border-radius:24px; margin-bottom:16px;">
+                                <div class="sort-buttons" style="display:flex; gap:8px; justify-content:center;">
+                                    ${[
+                                        ['overdueDesc','⬇️ Старые'],
+                                        ['overdueAsc','⬆️ Новые'],
+                                        ['default','🔄 Стандарт']
+                                    ].map(([s,label]) => `<button class="btn ${state.sort===s?'active':''}" data-sort="${s}">${label}</button>`).join('')}
+                                </div>
+                            </div>
+                            <div class="actions">
+                                <button class="btn green" data-action="add">➕ Добавить</button>
+                                <button class="btn green" data-action="report">📄 Отчёт</button>
+                                <button class="btn" style="background:#4a7a7a;" data-action="route">📋 Маршрутный лист TXT</button>
+                                <button class="btn undo" data-action="undo">↩️ Отменить</button>
+                                <button class="btn" data-action="export">💾 Экспорт JSON</button>
+                                <button class="btn" data-action="import">📂 Импорт</button>
+                                <button class="btn" data-action="reset">🔄 Сброс</button>
+                            </div>
+                        ` : ''}
+
+                        <div class="stats">
+                            <div class="stat">🍺 Всего: ${total}</div>
+                            <div class="stat" style="background:#8b2c1d;">⚠️ Просрочка: ${counts[0]}</div>
+                            <div class="stat" style="background:#b85e1a;">🔥 Срочно: ${counts[1]}</div>
+                            <div class="stat" style="background:#b8a035;">⏳ Скоро: ${counts[2]}</div>
+                            <div class="stat" style="background:#2d5a24;">✅ Норма: ${counts[3]}</div>
+                            <div class="stat" style="background:#4a4a4a;">🔮 Будущие: ${counts[4]}</div>
+                            <div class="stat" style="background:#6b4f28;">🗑️ Корзина: ${state.trash.length}</div>
+                        </div>
+
+                        ${state.tab==='table' ? `
+                            <div class="bulk">
+                                <button class="btn" data-action="selectAll">✅ Выбрать все</button>
+                                <button class="btn" data-action="deselectAll">❌ Снять все</button>
+                                <button class="btn red" data-action="deleteSelected">🗑️ Удалить выбранное</button>
+                                <button class="btn" data-action="setToday">📅 Сегодня для выбранных</button>
+                            </div>
+                            <div class="table-wrap">
+                                <table>
+                                    <thead><tr><th></th><th>Точка</th><th>Адрес</th><th>Последний</th><th>Установить</th><th>Следующий</th><th>Дней</th><th>Статус</th><th>%</th></tr></thead>
+                                    <tbody>
+                                        ${enriched.map((p,i) => {
+                                            const idx = state.points.findIndex(x => x.name===p.name && x.address===p.address);
+                                            return `<tr class="${p.days>14?'highlight-overdue':''}">
+                                                <td><input type="checkbox" class="point-cb" value="${idx}"></td>
+                                                <td>🍺 ${p.name} ${p.comment?'💬':''} <button class="btn-small" data-action="history" data-index="${idx}">📜</button></td>
+                                                <td>${p.address}</td>
+                                                <td>📅 ${p.lastVisit}</td>
+                                                <td><input type="date" class="date-picker" id="dp-${idx}" value="${p.lastVisit}" max="${TODAY.toISOString().split('T')[0]}">
+                                                    <button class="btn-small" data-action="update" data-index="${idx}">🍻</button>
+                                                    <button class="btn-small" data-action="comment" data-index="${idx}">💬</button>
+                                                    <button class="btn-small red" data-action="delete" data-index="${idx}">❌</button>
+                                                </td>
+                                                <td>🍻 ${utils.next(p.lastVisit)}</td>
+                                                <td>${p.days>1000?'∞':p.days}</td>
+                                                <td><span class="status ${p.status[1]}">${p.status[0]}</span></td>
+                                                <td>${Math.min(100,Math.round(p.days/14*100))}%</td>
+                                            </tr>`;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : state.tab==='forecast' ? `
+                            <div class="forecast-view" style="display:grid; grid-template-columns:1fr 2fr; gap:20px;">
+                                <div class="forecast-calendar" style="background:rgba(202,155,52,0.1); padding:15px; border-radius:20px;">
+                                    <h3 style="color:${state.dark?'#fff':'#312713'}">📅 Календарь</h3>
+                                    <div class="calendar-grid" style="display:grid; grid-template-columns:repeat(7,1fr); gap:5px;">
+                                        ${(() => {
+                                            const first = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1);
+                                            const last = new Date(TODAY.getFullYear(), TODAY.getMonth()+1, 0);
+                                            let html = '';
+                                            for(let d=1; d<=last.getDate(); d++) {
+                                                const date = new Date(TODAY.getFullYear(), TODAY.getMonth(), d);
+                                                const visits = state.points.filter(p => {
+                                                    const next = new Date(p.lastVisit);
+                                                    next.setDate(next.getDate()+14);
+                                                    return next.toDateString() === date.toDateString();
+                                                }).length;
+                                                html += `<div class="calendar-day ${visits ? 'has-visits' : ''}">${d}${visits?`<br><small>${visits}</small>`:''}</div>`;
+                                            }
+                                            return html;
+                                        })()}
+                                    </div>
+                                    <div style="margin-top:10px;">
+                                        <button class="btn ${state.forecastMode==='day'?'active':''}" data-forecast="day">По дням</button>
+                                        <button class="btn ${state.forecastMode==='point'?'active':''}" data-forecast="point">По точкам</button>
+                                    </div>
+                                </div>
+                                <div class="forecast-list" style="background:rgba(202,155,52,0.1); padding:15px; border-radius:20px; max-height:500px; overflow-y:auto;">
+                                    ${state.forecastMode==='day' ? (() => {
+                                        let html = '';
+                                        for(let i=0; i<14; i++) {
+                                            const date = new Date(TODAY);
+                                            date.setDate(TODAY.getDate()+i);
+                                            const visits = state.points.filter(p => {
+                                                const next = new Date(p.lastVisit);
+                                                next.setDate(next.getDate()+14);
+                                                return next.toDateString() === date.toDateString();
+                                            });
+                                            if(visits.length) {
+                                                html += `<div class="forecast-group" style="margin-bottom:20px;">
+                                                    <div class="forecast-date">${date.toLocaleDateString('ru-RU',{weekday:'short',day:'numeric',month:'short'})}${i===0?' (сегодня)':''}</div>
+                                                    ${visits.map(v => `<div class="forecast-item"><span>${v.name}</span><span>${v.address}</span></div>`).join('')}
+                                                </div>`;
+                                            }
+                                        }
+                                        return html || '<div class="forecast-item">Нет визитов на ближайшие 14 дней</div>';
+                                    })() : state.points.map(p => `<div class="forecast-item"><span>${p.name}</span><span>📅 ${utils.next(p.lastVisit)}</span></div>`).join('') || '<div class="forecast-item">Нет предстоящих визитов</div>'}
+                                </div>
+                            </div>
+                        ` : state.tab==='charts' ? `
+                            <div class="charts-container" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:20px;">
+                                <div class="chart-card" style="background:rgba(202,155,52,0.1); padding:15px; border-radius:16px;">
+                                    <div class="chart-title" style="color:${state.dark?'#fff':'#312713'}">📊 Распределение статусов</div>
+                                    <canvas id="pieChart" width="200" height="200"></canvas>
+                                    <div id="legend" style="margin-top:20px; color:${state.dark?'#fff':'#312713'}"></div>
+                                </div>
+                                <div class="chart-card" style="background:rgba(202,155,52,0.1); padding:15px; border-radius:16px;">
+                                    <div class="chart-title" style="color:${state.dark?'#fff':'#312713'}">🏆 Топ-10 проблемных</div>
+                                    <div id="topList" style="color:${state.dark?'#fff':'#312713'}"></div>
+                                </div>
+                            </div>
+                        ` : state.tab==='history' ? `
+                            <div class="table-wrap">
+                                <table>
+                                    <thead><tr><th>Дата</th><th>Точка</th><th>Адрес</th><th>Действие</th><th>Старая</th><th>Новая</th></tr></thead>
+                                    <tbody>${state.history.map(h => `<tr><td style="color:${state.dark?'#fff':'#312713'}">${new Date(h.timestamp).toLocaleString()}</td><td style="color:${state.dark?'#fff':'#312713'}">${h.pointName}</td><td style="color:${state.dark?'#fff':'#312713'}">${h.pointAddress}</td><td style="color:${state.dark?'#fff':'#312713'}">${h.actionType}</td><td style="color:${state.dark?'#fff':'#312713'}">${h.oldDate.slice(0,10)}</td><td style="color:${state.dark?'#fff':'#312713'}">${h.newDate.slice(0,10)}</td></tr>`).join('') || '<tr><td colspan="6" style="text-align:center; padding:30px; color:' + (state.dark?'#fff':'#312713') + ';">📭 История изменений пуста</td></td>'}</tbody>
+                                </table>
+                            </div>
+                        ` : `
+                            <div class="bulk">
+                                <button class="btn" style="background:#3d7a7a;" data-action="restoreAll">🔄 Восстановить все</button>
+                                <button class="btn red" data-action="clearTrash">❌ Очистить корзину</button>
+                            </div>
+                            <div class="table-wrap">${state.trash.length ? state.trash.map((t,i) => `<div style="padding:15px; background:${state.dark ? '#2a2a2a' : '#fff3e0'}; color:${state.dark ? '#fff' : '#312713'}; border-radius:16px; margin:10px 0; border-left:6px solid #b83b3b;"><div><strong>${t.name}</strong> (${t.address})</div><div>Последний: ${t.lastVisit}</div><div>Удалена: ${new Date(t.deletedAt).toLocaleString()}</div>${t.comment?'<div>💬 '+t.comment+'</div>':''}<button class="btn-small" style="background:#3d7a7a;" data-action="restore" data-index="${i}">↩️ Восстановить</button></div>`).join('') : '<div style="text-align:center; padding:40px; color:' + (state.dark?'#fff':'#312713') + ';">🗑️ Корзина пуста</div>'}</div>
+                        `}
+
+                        <div class="note">🍺 Статусы: >14 дней - красный, 12-14 - оранжевый, 8-11 - жёлтый, 0-7 - зелёный, будущие - серый</div>
+                        <div class="footer"><span>🍻 ПИВНАЯ КОМПАНИЯ ТПКК</span><span>⚙️ ЦИКЛ: 14Д • ${state.points.length} ТОЧЕК</span></div>
+                    </div>
+                `;
+
+                // Графики
+                if(state.tab==='charts') {
+                    const canvas = document.getElementById('pieChart');
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0,0,200,200);
+                    const data = [counts[0],counts[1],counts[2],counts[3],counts[4]];
+                    const colors = ['#c53b1e','#e68a2e','#b8a035','#3b8230','#5f5f5f'];
+                    const labels = ['Просрочено','Срочно','Скоро','В норме','Будущие'];
+                    let start = 0;
+                    data.forEach((val,i) => {
+                        if(val > 0) {
+                            ctx.beginPath();
+                            ctx.moveTo(100,100);
+                            ctx.arc(100,100,80,start,start+(val/total)*2*Math.PI);
+                            ctx.closePath();
+                            ctx.fillStyle = colors[i];
+                            ctx.fill();
+                            start += (val/total)*2*Math.PI;
+                        }
+                    });
+                    document.getElementById('legend').innerHTML = labels.map((l,i) => `<div style="display:flex; align-items:center; gap:10px;"><span style="width:20px; height:20px; background:${colors[i]}; border-radius:4px;"></span>${l}: ${data[i]} (${Math.round(data[i]/total*100||0)}%)</div>`).join('');
+                    
+                    const top = [...state.points].map(p => ({...p, days: utils.days(p.lastVisit)})).filter(p=>p.days<1000).sort((a,b)=>b.days-a.days).slice(0,10);
+                    document.getElementById('topList').innerHTML = top.map((p,i) => `<div style="display:flex; justify-content:space-between; margin:5px 0;"><span>${i+1}. ${p.name}</span><span style="color:${p.days>14?'#c53b1e':p.days>=12?'#e68a2e':p.days>=8?'#b8a035':'#3b8230'}">${p.days>1000?'∞':p.days} дн.</span></div>`).join('');
+                }
+            }
+
+            // Обработчик событий
+            document.addEventListener('click', (e) => {
+                const action = e.target.dataset.action;
+                const tab = e.target.dataset.tab;
+                const sort = e.target.dataset.sort;
+                const forecast = e.target.dataset.forecast;
+                const route = e.target.dataset.route;
+                const index = e.target.dataset.index;
+
+                if(tab) { state.tab = tab; render(); }
+                if(sort) { state.sort = sort; render(); }
+                if(forecast) { state.forecastMode = forecast; render(); }
+                if(action === 'theme') { state.dark = !state.dark; document.body.classList.toggle('dark', state.dark); render(); }
+
+                if(action === 'route') {
+                    document.getElementById('routeModal').style.display = 'flex';
+                    const today = new Date();
+                    const weekLater = new Date(today);
+                    weekLater.setDate(today.getDate() + 7);
+                    document.getElementById('routeDateFrom').value = today.toISOString().split('T')[0];
+                    document.getElementById('routeDateTo').value = weekLater.toISOString().split('T')[0];
+                }
+
+                if(route) {
+                    const today = new Date();
+                    const from = document.getElementById('routeDateFrom');
+                    const to = document.getElementById('routeDateTo');
+                    
+                    if (route === 'week') {
+                        const weekLater = new Date(today);
+                        weekLater.setDate(today.getDate() + 7);
+                        from.value = today.toISOString().split('T')[0];
+                        to.value = weekLater.toISOString().split('T')[0];
+                        document.getElementById('customDateRange').style.display = 'flex';
+                    } else if (route === 'month') {
+                        const monthLater = new Date(today);
+                        monthLater.setMonth(today.getMonth() + 1);
+                        from.value = today.toISOString().split('T')[0];
+                        to.value = monthLater.toISOString().split('T')[0];
+                        document.getElementById('customDateRange').style.display = 'flex';
+                    } else if (route === 'quarter') {
+                        const quarterLater = new Date(today);
+                        quarterLater.setMonth(today.getMonth() + 3);
+                        from.value = today.toISOString().split('T')[0];
+                        to.value = quarterLater.toISOString().split('T')[0];
+                        document.getElementById('customDateRange').style.display = 'flex';
+                    } else if (route === 'custom') {
+                        document.getElementById('customDateRange').style.display = 'flex';
+                    }
+                }
+
+                if (e.target.id === 'generateRouteBtn') {
+                    const from = document.getElementById('routeDateFrom').value;
+                    const to = document.getElementById('routeDateTo').value;
+                    
+                    if (!from || !to) {
+                        alert('Выберите период');
+                        return;
+                    }
+                    
+                    const report = generateRouteReport(from, to);
+                    const preview = document.getElementById('routePreview');
+                    preview.style.display = 'block';
+                    preview.textContent = report;
+                    
+                    const blob = new Blob([report], {type: 'text/plain;charset=utf-8'});
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `tpkk_route_${TODAY.toISOString().slice(0,10)}.txt`;
+                    a.click();
+                    
+                    utils.msg('📋 Маршрутный лист сохранён');
+                }
+
+                if (e.target.id === 'closeRouteBtn') {
+                    document.getElementById('routeModal').style.display = 'none';
+                    document.getElementById('routePreview').style.display = 'none';
+                }
+
+                if(action === 'add') {
+                    const n = prompt('Название:'), a = prompt('Адрес:'), d = prompt('Дата (ГГГГ-ММ-ДД):', TODAY.toISOString().slice(0,10));
+                    if(n && a && d && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+                        state.points.push({name:n, address:a, lastVisit:d, comment:''});
+                        state.history.unshift({timestamp:new Date().toISOString(), actionType:'Добавление', pointName:n, pointAddress:a, oldDate:'', newDate:d});
+                        utils.save(); render(); utils.msg('✅ Точка добавлена');
+                    }
+                }
+
+                if(action === 'update' && index!==undefined) {
+                    const picker = document.getElementById(`dp-${index}`);
+                    if(picker) {
+                        const old = state.points[index].lastVisit;
+                        state.points[index].lastVisit = picker.value;
+                        state.history.unshift({timestamp:new Date().toISOString(), actionType:'Изменение', pointName:state.points[index].name, pointAddress:state.points[index].address, oldDate:old, newDate:picker.value});
+                        utils.save(); render(); utils.msg('✅ Дата обновлена');
+                    }
+                }
+
+                if(action === 'delete' && index!==undefined) {
+                    if(confirm(`Удалить "${state.points[index].name}"?`)) {
+                        state.trash.push({...state.points[index], deletedAt:new Date().toISOString()});
+                        state.history.unshift({timestamp:new Date().toISOString(), actionType:'Удаление', pointName:state.points[index].name, pointAddress:state.points[index].address, oldDate:state.points[index].lastVisit, newDate:'удалена'});
+                        state.points.splice(index,1);
+                        utils.save(); render(); utils.msg('❌ Точка удалена');
+                    }
+                }
+
+                if(action === 'restore' && index!==undefined) {
+                    const p = state.trash[index];
+                    state.points.push({...p});
+                    state.history.unshift({timestamp:new Date().toISOString(), actionType:'Восстановление', pointName:p.name, pointAddress:p.address, oldDate:'корзина', newDate:p.lastVisit});
+                    state.trash.splice(index,1);
+                    utils.save(); render(); utils.msg('✅ Точка восстановлена');
+                }
+
+                if(action === 'comment' && index!==undefined) {
+                    const comment = prompt('Введите комментарий:', state.points[index].comment||'');
+                    if(comment!==null) {
+                        state.points[index].comment = comment;
+                        state.history.unshift({timestamp:new Date().toISOString(), actionType:'Комментарий', pointName:state.points[index].name, pointAddress:state.points[index].address, oldDate:'', newDate:comment});
+                        utils.save(); render(); utils.msg('💬 Комментарий сохранён');
+                    }
+                }
+
+                if(action === 'history' && index!==undefined) {
+                    const p = state.points[index];
+                    const h = state.history.filter(h => h.pointName===p.name && h.pointAddress===p.address);
+                    alert(h.map(h => `${new Date(h.timestamp).toLocaleString()}: ${h.actionType} ${h.oldDate}→${h.newDate}`).join('\n') || 'Нет истории');
+                }
+
+                if(action === 'selectAll') document.querySelectorAll('.point-cb').forEach(cb => cb.checked = true);
+                if(action === 'deselectAll') document.querySelectorAll('.point-cb').forEach(cb => cb.checked = false);
+
+                if(action === 'deleteSelected') {
+                    const cbs = document.querySelectorAll('.point-cb:checked');
+                    if(cbs.length && confirm(`Удалить ${cbs.length} точек?`)) {
+                        const indices = Array.from(cbs).map(cb => parseInt(cb.value)).sort((a,b)=>b-a);
+                        indices.forEach(i => {
+                            state.trash.push({...state.points[i], deletedAt:new Date().toISOString()});
+                            state.history.unshift({timestamp:new Date().toISOString(), actionType:'Массовое удаление', pointName:state.points[i].name, pointAddress:state.points[i].address, oldDate:state.points[i].lastVisit, newDate:'удалена'});
+                        });
+                        indices.forEach(i => state.points.splice(i,1));
+                        utils.save(); render(); utils.msg(`✅ Удалено ${indices.length} точек`);
+                    }
+                }
+
+                if(action === 'setToday') {
+                    const cbs = document.querySelectorAll('.point-cb:checked');
+                    if(cbs.length) {
+                        const today = TODAY.toISOString().split('T')[0];
+                        Array.from(cbs).forEach(cb => {
+                            const i = parseInt(cb.value);
+                            const old = state.points[i].lastVisit;
+                            state.points[i].lastVisit = today;
+                            state.history.unshift({timestamp:new Date().toISOString(), actionType:'Массовое обновление', pointName:state.points[i].name, pointAddress:state.points[i].address, oldDate:old, newDate:today});
+                        });
+                        utils.save(); render(); utils.msg(`✅ Обновлено ${cbs.length} точек`);
+                    }
+                }
+
+                if(action === 'restoreAll') {
+                    if(state.trash.length && confirm(`Восстановить ${state.trash.length} точек?`)) {
+                        state.trash.forEach(p => {
+                            state.points.push({...p});
+                            state.history.unshift({timestamp:new Date().toISOString(), actionType:'Массовое восстановление', pointName:p.name, pointAddress:p.address, oldDate:'корзина', newDate:p.lastVisit});
+                        });
+                        state.trash = [];
+                        utils.save(); render(); utils.msg('✅ Все восстановлены');
+                    }
+                }
+
+                if(action === 'clearTrash') {
+                    if(state.trash.length && confirm('Очистить корзину?')) {
+                        state.history.unshift({timestamp:new Date().toISOString(), actionType:'Очистка корзины', pointName:'Система', pointAddress:'', oldDate:`${state.trash.length} точек`, newDate:'удалены'});
+                        state.trash = [];
+                        utils.save(); render(); utils.msg('🗑️ Корзина очищена');
+                    }
+                }
+
+                if(action === 'undo') {
+                    if(state.history.length) {
+                        state.history.shift();
+                        utils.load();
+                        render();
+                        utils.msg('↩️ Отменено');
+                    } else utils.msg('❌ Нет действий');
+                }
+
+                if(action === 'export') {
+                    const data = JSON.stringify({points:state.points, trash:state.trash, history:state.history, exportDate:new Date().toISOString()}, null, 2);
+                    const blob = new Blob([data], {type:'application/json'});
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `tpkk_backup_${TODAY.toISOString().slice(0,10)}.json`;
+                    a.click();
+                    utils.msg('💾 Данные экспортированы');
+                }
+
+                if(action === 'import') {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.json';
+                    input.onchange = e => {
+                        const file = e.target.files[0];
+                        const reader = new FileReader();
+                        reader.onload = ev => {
+                            try {
+                                const d = JSON.parse(ev.target.result);
+                                if(d.points) {
+                                    state.points = d.points;
+                                    state.trash = d.trash || [];
+                                    state.history = d.history || [];
+                                    utils.save(); render(); utils.msg('✅ Данные импортированы');
+                                } else alert('Неверный формат');
+                            } catch { alert('Ошибка чтения'); }
+                        };
+                        reader.readAsText(file);
+                    };
+                    input.click();
+                }
+
+                if(action === 'reset') {
+                    if(confirm('Сбросить к исходным?')) {
+                        state.points = [...INIT_DATA];
+                        state.trash = [];
+                        state.history = [];
+                        utils.save(); render(); utils.msg('🔄 Данные сброшены');
+                    }
+                }
+
+                if(action === 'report') {
+                    const total = state.points.length;
+                    const counts = [0,0,0,0,0];
+                    state.points.forEach(p => { const d = utils.days(p.lastVisit); if(d>14) counts[0]++; else if(d>=12) counts[1]++; else if(d>=8) counts[2]++; else if(d>=0) counts[3]++; else counts[4]++; });
+                    const todayVisits = state.points.filter(p => {
+                        const next = new Date(p.lastVisit);
+                        next.setDate(next.getDate()+14);
+                        return next.toDateString() === TODAY.toDateString();
+                    }).map(p => `  • ${p.name} (${p.address})`).join('\n');
+                    
+                    alert(`ОТЧЁТ ТПКК
+═════════════════
+Всего: ${total}
+Просрочка: ${counts[0]}
+Срочно: ${counts[1]}
+Скоро: ${counts[2]}
+Норма: ${counts[3]}
+Будущие: ${counts[4]}
+Корзина: ${state.trash.length}
+Сегодня: ${todayVisits || 'нет'}`);
+                }
+            });
+
+            render();
+        })();
+    </script>
+</body>
+</html>
